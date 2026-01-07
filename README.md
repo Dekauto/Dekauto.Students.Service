@@ -1,5 +1,5 @@
 # Dekauto: 🔵 Сервис Студентов (Dekauto.Students.Service)
-### Сервис управления данными студентов, групп и ОО (обр. организаций) и взаимодествия с базой данных в отношении этих объектов. Связующий сервис между сервисами [Импорт](https://github.com/TOXYGENCY/Dekauto.Import.Service) и [Экспорт](https://github.com/TOXYGENCY/Dekauto.Export.Service).
+### Сервис управления данными студентов, групп и ОО (обр. организаций) и взаимодествия с базой данных в отношении этих объектов. Связующий сервис между сервисами [Импорт](https://github.com/TOXYGENCY/Dekauto.Import.Service) и [Экспорт](https://github.com/TOXYGENCY/Dekauto.Export.Service). 
 
 ### 🔸 Функции
 - Управление (CRUD) объектами Student и Group (+ Oo).
