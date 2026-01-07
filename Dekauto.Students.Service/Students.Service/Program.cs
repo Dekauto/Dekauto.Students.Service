@@ -1,16 +1,15 @@
 using Dekauto.groups.Service.groups.Service.Infrastructure;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
 using Dekauto.Students.Service.Students.Service.Infrastructure;
+using Dekauto.Students.Service.Students.Service.Middlewares;
 using Dekauto.Students.Service.Students.Service.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using NuGet.Protocol;
 using Prometheus;
 using Serilog;
 using Serilog.Events;
-using Serilog.Formatting.Compact;
 using Serilog.Sinks.Loki;
 using System.Net.Http.Headers;
 using System.Text;
@@ -49,11 +48,11 @@ try
     var builder = WebApplication.CreateBuilder(args);
     // Применение конфигов.
     builder.Configuration
-        .AddEnvironmentVariables()
         .SetBasePath(Directory.GetCurrentDirectory())
         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
         .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
         .AddJsonFile($"appsettings.{Environment.UserName.ToLowerInvariant()}.json", optional: true, reloadOnChange: true)
+        .AddEnvironmentVariables()
         .AddCommandLine(args);
 
     // Полноценная настройка Serilog логгера (из конфига)
@@ -98,8 +97,9 @@ try
     }
 
     // Add services to the container.
+    var useEndpointAuth = Boolean.Parse(builder.Configuration["UseEndpointAuth"] ?? "true");
 
-    if (Boolean.Parse(builder.Configuration["UseEndpointAuth"] ?? "true"))
+    if (useEndpointAuth)
     {
         // Добавляем JWT сервисы
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -136,7 +136,7 @@ try
             var authHeader = Convert.ToBase64String(
                 Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}")
             );
-            Console.WriteLine($"Authorization Header: Basic {authHeader}"); // Ëîãèðóåì çàãîëîâîê
+            Console.WriteLine($"Authorization Header: Basic {authHeader}");
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authHeader);
         });
         builder.Services.AddHttpClient("ImportService", (provider, client) =>
@@ -163,6 +163,15 @@ try
         builder.Services.AddAuthorizationBuilder()
             .AddPolicy("OnlyAdmin", policy => policy.RequireAssertion(_ => true));
     }
+    // HTTP Client для Auth Service
+    builder.Services.AddHttpClient<ITokenValidationClient, TokenValidationClient>(client =>
+    {
+        // URL запущенного Auth Service.
+        string authUri = builder.Configuration["Services:Auth:general"] ?? "http://dekauto.auth:5507/api/";
+        if (!authUri.EndsWith("/")) authUri += "/"; // обязательно заканчивается на /
+
+        client.BaseAddress = new Uri(authUri);
+    });
 
     builder.Services.AddControllers()
         .AddJsonOptions(options =>
@@ -173,36 +182,41 @@ try
     // Добавление swagger с авторизацией
     builder.Services.AddSwaggerGen(c =>
     {
-        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        if (useEndpointAuth)
         {
-            Description = "Input JWT token (without 'Bearer')",
-            Name = "Authorization",
-            In = ParameterLocation.Header,
-            Type = SecuritySchemeType.Http,
-            Scheme = "Bearer",
-            BearerFormat = "JWT"
-        });
-
-        c.AddSecurityRequirement(new OpenApiSecurityRequirement
-        {
-        {
-            new OpenApiSecurityScheme
+            c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "oauth2",
-                Name = "Bearer",
+                Description = "Input JWT token (without 'Bearer')",
+                Name = "Authorization",
                 In = ParameterLocation.Header,
-            },
-            new List<string>()
+                Type = SecuritySchemeType.Http,
+                Scheme = "Bearer",
+                BearerFormat = "JWT"
+            });
+
+            c.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    },
+                    Scheme = "oauth2",
+                    Name = "Bearer",
+                    In = ParameterLocation.Header,
+                },
+                new List<string>()
+            }
+            });
         }
-        });
     });
 
     builder.Services.AddHttpClient();
+    // Memory Cache (для кэширования ответов от Auth Service)
+    builder.Services.AddMemoryCache();
     builder.Services.AddTransient<IStudentsRepository, StudentsRepository>();
     builder.Services.AddTransient<IGroupsRepository, GroupsRepository>();
     builder.Services.AddTransient<IStudentsService, StudentsService>();
@@ -253,10 +267,14 @@ try
         Log.Warning("Disabled HTTPS.");
     }
 
-    if (Boolean.Parse(app.Configuration["UseEndpointAuth"] ?? "true"))
+    if (useEndpointAuth)
     {
         // Аутентификация (JWT, куки и т.д.)
         app.UseAuthentication();
+
+        // ПОДКЛЮЧАЕМ MIDDLEWARE
+        // Он вызовет ITokenValidationClient -> тот посмотрит в Кэш или сходит по HTTP в Auth Service
+        app.UseMiddleware<RemoteTokenRevocationMiddleware>();
 
         // Авторизация (защита контроллеров через [Authorize])
         app.UseAuthorization();
