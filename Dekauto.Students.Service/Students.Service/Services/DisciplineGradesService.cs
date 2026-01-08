@@ -87,16 +87,7 @@ namespace Dekauto.Students.Service.Students.Service.Services
             // Ручной маппинг для отличающихся имен и типов
             dto.DisciplineName = entity.Name;
 
-            // Конвертация Score (String -> Double?)
-            // В БД Score - это varchar, в DTO - double?
-            if (double.TryParse(entity.Score, NumberStyles.Any, CultureInfo.InvariantCulture, out double scoreVal))
-            {
-                dto.Score = scoreVal;
-            }
-            else
-            {
-                dto.Score = null; // Если там "зачет" или текст, возвращаем null
-            }
+            dto.Score = entity.Score;
 
             return dto;
         }
@@ -110,17 +101,6 @@ namespace Dekauto.Students.Service.Students.Service.Services
 
             // Ручной маппинг для отличающихся имен и типов
             entity.Name = dto.DisciplineName;
-
-            // Конвертация Score (Double? -> String)
-            if (dto.Score.HasValue)
-            {
-                entity.Score = dto.Score.Value.ToString(CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                // Значение по умолчанию или null, если оценка не проставлена
-                entity.Score = "Оценка (от 0 до 15, или зачет)";
-            }
 
             return entity;
         }
