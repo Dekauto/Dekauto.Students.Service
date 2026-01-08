@@ -14,7 +14,7 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
         private readonly IStudentsService studentsService;
         private readonly ILogger<ExportController> logger;
 
-        public StudentsController(IStudentsRepository studentsRepository, IStudentsService studentsService, 
+        public StudentsController(IStudentsRepository studentsRepository, IStudentsService studentsService,
             ILogger<ExportController> logger)
         {
             this.studentsRepository = studentsRepository;

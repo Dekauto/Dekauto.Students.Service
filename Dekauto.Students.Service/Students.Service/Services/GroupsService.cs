@@ -12,7 +12,7 @@ namespace Dekauto.Students.Service.Students.Service.Services
         private readonly IGroupsRepository groupsRepository;
         private readonly IStudentsRepository studentsRepository;
         private readonly DekautoContext сontext;
-        public GroupsService(DekautoContext сontext, IGroupsRepository groupsRepository, 
+        public GroupsService(DekautoContext сontext, IGroupsRepository groupsRepository,
             IStudentsRepository studentsRepository)
         {
             this.сontext = сontext;
@@ -91,7 +91,8 @@ namespace Dekauto.Students.Service.Students.Service.Services
             {
                 var group = await FromDtoAsync(groupDto);
                 await groupsRepository.AddAsync(group);
-            } else
+            }
+            else
             {
                 throw new Exception($"Такой элемент уже существует в базе данных; ID = {groupDto.Id}.");
             }

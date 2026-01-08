@@ -1,5 +1,4 @@
 ﻿using Dekauto.Students.Service.Students.Service.Domain.Entities;
-using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
 namespace Dekauto.Students.Service.Students.Service.Infrastructure;
@@ -15,6 +14,8 @@ public partial class DekautoContext : DbContext
     {
     }
 
+    public virtual DbSet<DisciplineGrade> DisciplineGrades { get; set; }
+
     public virtual DbSet<Group> Groups { get; set; }
 
     public virtual DbSet<Oo> Oos { get; set; }
@@ -22,6 +23,8 @@ public partial class DekautoContext : DbContext
     public virtual DbSet<Role> Roles { get; set; }
 
     public virtual DbSet<Student> Students { get; set; }
+
+    public virtual DbSet<TokenInfo> TokenInfos { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
 
@@ -31,6 +34,40 @@ public partial class DekautoContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("uuid-ossp");
+
+        modelBuilder.Entity<DisciplineGrade>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("discipline_grades_pkey");
+
+            entity.ToTable("discipline_grades");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("id");
+            entity.Property(e => e.AudHours).HasColumnName("aud_hours");
+            entity.Property(e => e.ControlType)
+                .HasMaxLength(255)
+                .HasColumnName("control_type");
+            entity.Property(e => e.CreditUnits).HasColumnName("credit_units");
+            entity.Property(e => e.Name)
+                .HasMaxLength(255)
+                .HasColumnName("name");
+            entity.Property(e => e.Score)
+                .HasMaxLength(255)
+                .HasDefaultValueSql("'Оценка (от 0 до 15, или зачет)'::character varying")
+                .HasColumnName("score");
+            entity.Property(e => e.Semester)
+                .HasComment("Номер семестра")
+                .HasColumnName("semester");
+            entity.Property(e => e.StudentId).HasColumnName("student_id");
+            entity.Property(e => e.Year)
+                .HasComment("Год для семестра")
+                .HasColumnName("year");
+
+            entity.HasOne(d => d.Student).WithMany(p => p.DisciplineGrades)
+                .HasForeignKey(d => d.StudentId)
+                .HasConstraintName("discipline_grades_student_id_fkey");
+        });
 
         modelBuilder.Entity<Group>(entity =>
         {
@@ -298,6 +335,49 @@ public partial class DekautoContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("students_user_id_fkey");
+        });
+
+        modelBuilder.Entity<TokenInfo>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("token_infos_pkey");
+
+            entity.ToTable("token_infos");
+
+            entity.HasIndex(e => e.ExpiresAt, "idx_token_infos_expires_at");
+
+            entity.HasIndex(e => e.Jti, "idx_token_infos_jti").IsUnique();
+
+            entity.HasIndex(e => e.RefreshTokenHash, "idx_token_infos_refresh_hash");
+
+            entity.HasIndex(e => e.UserId, "idx_token_infos_user_id");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("id");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnName("created_at");
+            entity.Property(e => e.DeviceInfo).HasColumnName("device_info");
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at");
+            entity.Property(e => e.IpAddress).HasColumnName("ip_address");
+            entity.Property(e => e.IsRevoked)
+                .HasDefaultValue(false)
+                .HasColumnName("is_revoked");
+            entity.Property(e => e.Jti)
+                .HasMaxLength(255)
+                .HasColumnName("jti");
+            entity.Property(e => e.RefreshTokenHash)
+                .HasMaxLength(255)
+                .HasColumnName("refresh_token_hash");
+            entity.Property(e => e.RevokeReason)
+                .HasMaxLength(500)
+                .HasColumnName("revoke_reason");
+            entity.Property(e => e.RevokedAt).HasColumnName("revoked_at");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+
+            entity.HasOne(d => d.User).WithMany(p => p.TokenInfos)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("token_infos_user_id_fkey");
         });
 
         modelBuilder.Entity<User>(entity =>

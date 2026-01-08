@@ -24,13 +24,9 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
             try
             {
                 if (files is null)
-                {
                     throw new ArgumentNullException(nameof(files));
-                }
 
-                await importProvider.ImportFilesAsync(files);
-
-                return Ok();
+                return Ok(await importProvider.ImportFilesAsync(files));
             }
             catch (ArgumentNullException ex)
             {

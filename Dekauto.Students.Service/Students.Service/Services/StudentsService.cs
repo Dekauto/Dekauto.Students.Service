@@ -3,8 +3,6 @@ using Dekauto.Students.Service.Students.Service.Domain.Entities.DTO;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
 using Dekauto.Students.Service.Students.Service.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Migrations.Operations;
-using System.Collections.Generic;
 using System.Text.Json;
 using Group = Dekauto.Students.Service.Students.Service.Domain.Entities.Group;
 
@@ -37,14 +35,14 @@ namespace Dekauto.Students.Service.Students.Service.Services
         {
             var student = await studentsRepository.GetByIdAsync(studentId);
             if (student == null) throw new KeyNotFoundException(nameof(student));
-            
+
             // Конвертируем общие поля
             var studentExportDto = JsonSerializationConvert<Student, StudentExportDto>(student);
 
             // Дополняем объект нужными данными из БД
-            if (student.Group == null) 
+            if (student.Group == null)
                 throw new InvalidOperationException($"Отсутствует группа у студента {student.Surname} (id = {student.Id})");
-            if (student.Oo == null) 
+            if (student.Oo == null)
                 throw new InvalidOperationException($"Отсутствует образовательная организация у студента {student.Surname} (id = {student.Id})");
             studentExportDto.GroupName = student.Group.Name;
             studentExportDto.OOName = student.Oo.Name;
@@ -84,7 +82,7 @@ namespace Dekauto.Students.Service.Students.Service.Services
             if (student == null) throw new ArgumentNullException(nameof(student));
             return JsonSerializationConvert<Student, StudentDto>(student);
         }
-        
+
         public IEnumerable<StudentDto> ToDtos(IEnumerable<Student> students)
         {
             if (students == null) throw new ArgumentNullException(nameof(students));
@@ -210,6 +208,6 @@ namespace Dekauto.Students.Service.Students.Service.Services
 
             return student;
         }
-    
+
     }
 }

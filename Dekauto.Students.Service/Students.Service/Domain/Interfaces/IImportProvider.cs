@@ -4,6 +4,6 @@ namespace Dekauto.Students.Service.Students.Service.Domain.Interfaces
 {
     public interface IImportProvider
     {
-        Task ImportFilesAsync(ImportFilesAdapter files);
+        Task<DiplomaSupplementData?> ImportFilesAsync(ImportFilesAdapter files);
     }
 }

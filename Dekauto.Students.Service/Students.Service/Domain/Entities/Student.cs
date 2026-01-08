@@ -1,5 +1,4 @@
-﻿
-namespace Dekauto.Students.Service.Students.Service.Domain.Entities;
+﻿namespace Dekauto.Students.Service.Students.Service.Domain.Entities;
 
 public partial class Student
 {
@@ -152,6 +151,8 @@ public partial class Student
     public string? AddressResidentialHousingType { get; set; }
 
     public string? Education { get; set; }
+
+    public virtual ICollection<DisciplineGrade> DisciplineGrades { get; set; } = new List<DisciplineGrade>();
 
     public virtual Group? Group { get; set; }
 

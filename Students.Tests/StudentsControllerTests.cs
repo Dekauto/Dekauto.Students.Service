@@ -1,5 +1,5 @@
-using Dekauto.Students.Service;
 using Dekauto.Students.Service.Students.Service.Controllers;
+using Dekauto.Students.Service.Students.Service.Domain;
 using Dekauto.Students.Service.Students.Service.Domain.Entities.DTO;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
 using Microsoft.AspNetCore.Http;

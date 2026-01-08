@@ -1,4 +1,3 @@
-using Dekauto.groups.Service.groups.Service.Infrastructure;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
 using Dekauto.Students.Service.Students.Service.Infrastructure;
 using Dekauto.Students.Service.Students.Service.Middlewares;

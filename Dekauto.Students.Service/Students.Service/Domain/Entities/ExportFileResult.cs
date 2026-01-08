@@ -5,7 +5,8 @@
         public byte[] FileData { get; set; }
         public string FileName { get; set; }
 
-        public ExportFileResult(byte[] FileData, string FileName) {
+        public ExportFileResult(byte[] FileData, string FileName)
+        {
             this.FileData = FileData;
             this.FileName = FileName;
         }

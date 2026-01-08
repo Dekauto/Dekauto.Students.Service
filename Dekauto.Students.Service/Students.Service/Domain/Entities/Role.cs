@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Dekauto.Students.Service.Students.Service.Domain.Entities;
+﻿namespace Dekauto.Students.Service.Students.Service.Domain.Entities;
 
 public partial class Role
 {

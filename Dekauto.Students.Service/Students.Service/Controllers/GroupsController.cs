@@ -2,7 +2,6 @@
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 
 namespace Dekauto.Students.Service.Students.Service.Controllers
 {
@@ -16,7 +15,7 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
         private readonly IGroupsService groupsService;
         private readonly ILogger<ExportController> logger;
 
-        public GroupsController(IGroupsRepository groupsRepository, IGroupsService groupsService, 
+        public GroupsController(IGroupsRepository groupsRepository, IGroupsService groupsService,
             ILogger<ExportController> logger)
         {
             this.groupsRepository = groupsRepository;
