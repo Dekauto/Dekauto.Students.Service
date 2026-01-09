@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text.Json.Serialization;
 
 namespace Dekauto.Students.Service.Students.Service.Domain.Entities;
 
@@ -26,5 +27,6 @@ public partial class TokenInfo
 
     public IPAddress? IpAddress { get; set; }
 
+    [JsonIgnore]
     public virtual User User { get; set; } = null!;
 }

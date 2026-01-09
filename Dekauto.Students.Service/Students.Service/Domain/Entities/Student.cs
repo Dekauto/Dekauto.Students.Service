@@ -1,4 +1,6 @@
-﻿namespace Dekauto.Students.Service.Students.Service.Domain.Entities;
+﻿using System.Text.Json.Serialization;
+
+namespace Dekauto.Students.Service.Students.Service.Domain.Entities;
 
 public partial class Student
 {
@@ -154,9 +156,12 @@ public partial class Student
 
     public virtual ICollection<DisciplineGrade> DisciplineGrades { get; set; } = new List<DisciplineGrade>();
 
+    [JsonIgnore]
     public virtual Group? Group { get; set; }
 
+    [JsonIgnore]
     public virtual Oo? Oo { get; set; }
 
+    [JsonIgnore]
     public virtual User? User { get; set; }
 }

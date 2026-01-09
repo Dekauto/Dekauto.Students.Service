@@ -1,4 +1,6 @@
-﻿namespace Dekauto.Students.Service.Students.Service.Domain.Entities;
+﻿using System.Text.Json.Serialization;
+
+namespace Dekauto.Students.Service.Students.Service.Domain.Entities;
 
 public partial class DisciplineGrade
 {
@@ -26,5 +28,6 @@ public partial class DisciplineGrade
 
     public double? CreditUnits { get; set; }
 
+    [JsonIgnore]
     public virtual Student? Student { get; set; }
 }

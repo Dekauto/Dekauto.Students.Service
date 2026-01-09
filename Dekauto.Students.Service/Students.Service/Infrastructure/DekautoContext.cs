@@ -66,7 +66,8 @@ public partial class DekautoContext : DbContext
 
             entity.HasOne(d => d.Student).WithMany(p => p.DisciplineGrades)
                 .HasForeignKey(d => d.StudentId)
-                .HasConstraintName("discipline_grades_student_id_fkey");
+                .HasConstraintName("discipline_grades_student_id_fkey")
+                .OnDelete(DeleteBehavior.Cascade); // Автоудаление оценки, если студент удален
         });
 
         modelBuilder.Entity<Group>(entity =>
