@@ -218,7 +218,9 @@ try
     builder.Services.AddMemoryCache();
     builder.Services.AddTransient<IStudentsRepository, StudentsRepository>();
     builder.Services.AddTransient<IGroupsRepository, GroupsRepository>();
+    builder.Services.AddTransient<IDisciplineGradesRepository, DisciplineGradesRepository>();
     builder.Services.AddTransient<IStudentsService, StudentsService>();
+    builder.Services.AddTransient<IDisciplineGradesService, DisciplineGradesService>();
     builder.Services.AddTransient<IGroupsService, GroupsService>();
     builder.Services.AddTransient<IExportProvider, ExportProvider>();
     builder.Services.AddTransient<IImportProvider, ImportProvider>();

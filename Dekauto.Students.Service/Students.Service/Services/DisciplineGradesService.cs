@@ -3,7 +3,6 @@ using Dekauto.Students.Service.Students.Service.Domain.Entities.DTO;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
 using Dekauto.Students.Service.Students.Service.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization;
 using System.Text.Json;
 
 namespace Dekauto.Students.Service.Students.Service.Services
@@ -19,19 +18,71 @@ namespace Dekauto.Students.Service.Students.Service.Services
             this.context = context;
         }
 
-        /// <summary>
-        /// Конвертирование из объекта src типа SRC в объект типа DEST через сериализацию и десереализацию в JSON-объект.
-        /// </summary>
         private DEST JsonSerializationConvert<SRC, DEST>(SRC src)
         {
             return JsonSerializer.Deserialize<DEST>(JsonSerializer.Serialize(src));
         }
 
+        #region IDtoConverter Implementation
+
+        // Реализация метода интерфейса IDtoConverter (async)
+        public Task<DisciplineGrade> FromDtoAsync(DisciplineGradeDto dto)
+        {
+            return Task.FromResult(FromDto(dto));
+        }
+
+        // Синхронный хелпер для одиночного объекта
+        private DisciplineGrade FromDto(DisciplineGradeDto dto)
+        {
+            if (dto == null) return null;
+
+            // Базовый маппинг совпадающих полей (Semester, Year, ControlType, AudHours, CreditUnits, Score)
+            var entity = JsonSerializationConvert<DisciplineGradeDto, DisciplineGrade>(dto);
+
+            // РУЧНОЙ МАППИНГ отличающихся полей
+            entity.Name = dto.DisciplineName;
+
+            // При создании через DTO Id обычно пустой, но можно явно инициализировать
+            // entity.Id = Guid.Empty; 
+
+            return entity;
+        }
+
+        // Реализация метода интерфейса для коллекции (Entities -> DTOs)
+        public IEnumerable<DisciplineGradeDto> ToDtos(IEnumerable<DisciplineGrade> entities)
+        {
+            if (entities == null) return new List<DisciplineGradeDto>();
+            return entities.Select(ToDto).ToList();
+        }
+
+        // Реализация метода интерфейса (Entity -> DTO)
+        public DisciplineGradeDto ToDto(DisciplineGrade entity)
+        {
+            if (entity == null) return null;
+
+            var dto = JsonSerializationConvert<DisciplineGrade, DisciplineGradeDto>(entity);
+
+            // РУЧНОЙ МАППИНГ отличающихся полей
+            dto.DisciplineName = entity.Name;
+
+            return dto;
+        }
+
+        // Метод для маппинга коллекции DTO -> Entities (используется при импорте)
+        public IEnumerable<DisciplineGrade> FromDtos(IEnumerable<DisciplineGradeDto> dtos)
+        {
+            if (dtos == null) return new List<DisciplineGrade>();
+            return dtos.Select(FromDto).ToList();
+        }
+
+        #endregion
+
+        #region Service Logic
+
         public async Task AddAsync(DisciplineGradeDto gradeDto, Guid studentId)
         {
             if (gradeDto == null) throw new ArgumentNullException(nameof(gradeDto));
 
-            // Проверка существования студента
             var studentExists = await context.Students.AnyAsync(s => s.Id == studentId);
             if (!studentExists) throw new KeyNotFoundException($"Student with ID {studentId} not found");
 
@@ -67,56 +118,15 @@ namespace Dekauto.Students.Service.Students.Service.Services
             var currentEntity = await disciplineGradesRepository.GetByIdAsync(id);
             if (currentEntity == null) throw new KeyNotFoundException($"Discipline grade with ID {id} not found");
 
-            // Обновляем поля через маппинг
             var updatedInfo = FromDto(gradeDto);
 
-            // Сохраняем ID и StudentId от существующей записи, так как их нет в DTO
+            // Восстанавливаем ID и связь, так как DTO их не содержит
             updatedInfo.Id = currentEntity.Id;
             updatedInfo.StudentId = currentEntity.StudentId;
 
             await disciplineGradesRepository.UpdateAsync(updatedInfo);
         }
 
-        private DisciplineGradeDto ToDto(DisciplineGrade entity)
-        {
-            if (entity == null) return null;
-
-            // Используем автоматический маппинг для совпадающих полей (Semester, Year, ControlType, AudHours, CreditUnits)
-            var dto = JsonSerializationConvert<DisciplineGrade, DisciplineGradeDto>(entity);
-
-            // Ручной маппинг для отличающихся имен и типов
-            dto.DisciplineName = entity.Name;
-
-            dto.Score = entity.Score;
-
-            return dto;
-        }
-
-        private DisciplineGrade FromDto(DisciplineGradeDto dto)
-        {
-            if (dto == null) return null;
-
-            // Используем автоматический маппинг для совпадающих полей
-            var entity = JsonSerializationConvert<DisciplineGradeDto, DisciplineGrade>(dto);
-
-            // Ручной маппинг для отличающихся имен и типов
-            entity.Name = dto.DisciplineName;
-
-            return entity;
-        }
-
-        private IEnumerable<DisciplineGradeDto> ToDtos(IEnumerable<DisciplineGrade> entities)
-        {
-            if (entities == null) return new List<DisciplineGradeDto>();
-
-            var dtos = new List<DisciplineGradeDto>();
-            foreach (var entity in entities)
-            {
-                dtos.Add(ToDto(entity));
-            }
-            return dtos;
-        }
-
+        #endregion
     }
-
 }

@@ -11,12 +11,14 @@ namespace Dekauto.Students.Service.Students.Service.Services
     public class StudentsService : IStudentsService
     {
         private readonly IStudentsRepository studentsRepository;
+        private readonly IDisciplineGradesService disciplineGradesService;
         private readonly DekautoContext context;
 
-        public StudentsService(IStudentsRepository studentsRepository, DekautoContext сontext)
+        public StudentsService(IStudentsRepository studentsRepository, DekautoContext сontext, IDisciplineGradesService disciplineGradesService)
         {
             this.studentsRepository = studentsRepository;
             this.context = сontext;
+            this.disciplineGradesService = disciplineGradesService;
         }
 
         /// <summary>
@@ -44,6 +46,7 @@ namespace Dekauto.Students.Service.Students.Service.Services
                 throw new InvalidOperationException($"Отсутствует группа у студента {student.Surname} (id = {student.Id})");
             if (student.Oo == null)
                 throw new InvalidOperationException($"Отсутствует образовательная организация у студента {student.Surname} (id = {student.Id})");
+
             studentExportDto.GroupName = student.Group.Name;
             studentExportDto.OOName = student.Oo.Name;
             studentExportDto.OOAddress = student.Oo.OoAddress;
@@ -51,8 +54,14 @@ namespace Dekauto.Students.Service.Students.Service.Services
             studentExportDto.EducationReceivedSerial = student.EducationReceivedSerial;
             studentExportDto.EducationReceivedEndYear = student.EducationReceivedEndYear;
 
+            if (student.DisciplineGrades != null && student.DisciplineGrades.Any())
+            {
+                studentExportDto.DisciplineResults = disciplineGradesService.ToDtos(student.DisciplineGrades).ToList();
+            }
+
             return studentExportDto;
         }
+
 
         public async Task<Student> FromDtoAsync(StudentDto studentDto)
         {
@@ -241,13 +250,10 @@ namespace Dekauto.Students.Service.Students.Service.Services
         {
             var student = JsonSerializationConvert<StudentExportDto, Student>(studentExportDto);
 
-            // РУЧНОЙ МАППИНГ ОЦЕНОК
-            // Так как имена свойств отличаются (DisciplineResults в DTO vs DisciplineGrades в Entity),
-            // JsonSerializationConvert их проигнорировал.
             if (studentExportDto.DisciplineResults != null && studentExportDto.DisciplineResults.Any())
             {
                 // Конвертируем DTO оценок в сущности
-                student.DisciplineGrades = FromDisciplineGradeDtos(studentExportDto.DisciplineResults);
+                student.DisciplineGrades = disciplineGradesService.FromDtos(studentExportDto.DisciplineResults).ToList();
             }
 
             // Обработка группы
