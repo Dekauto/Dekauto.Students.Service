@@ -6,5 +6,8 @@
         public IFormFile? ld { get; set; } // Личное дело
         public IFormFile? contract { get; set; } // Журнал договоров
         public IFormFile? journal { get; set; } // Журнал зачеток
+        public IFormFile? statement { get; set; } // Ведомость
+        public IFormFile? plan { get; set; } // Учебный план
+        public IFormFile? studentCard { get; set; } // Карточка студента (для приложения диплома)
     }
 }

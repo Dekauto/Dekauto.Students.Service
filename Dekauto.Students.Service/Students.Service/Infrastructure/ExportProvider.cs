@@ -1,7 +1,4 @@
-
-﻿using System.Net.Http.Headers;
-using System.Text;
-﻿using Dekauto.Students.Service.Students.Service.Controllers;
+using Dekauto.Students.Service.Students.Service.Controllers;
 using Dekauto.Students.Service.Students.Service.Domain.Entities;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
 using System.Configuration;
@@ -39,7 +36,7 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
             response.EnsureSuccessStatusCode();
 
             var fileData = await response.Content.ReadAsByteArrayAsync();
-            if (fileData == null) 
+            if (fileData == null)
             {
                 var mes = $"Полученный файл в ответе отсутствует. fileData = {fileData}";
                 logger.LogError(mes);
@@ -56,7 +53,7 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
         public async Task<ExportFileResult> ExportStudentCardAsync(Guid studentId)
         {
             logger.LogInformation($"Подготовка данных к экспорту студента с id = {studentId}...");
- 
+
             var studentExportDTO = await studentsService.ToExportDtoAsync(studentId);
 
             if (studentExportDTO == null) throw new KeyNotFoundException(nameof(studentExportDTO));

@@ -25,7 +25,7 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
             this.groupsService = groupsService;
         }
 
-        private async Task<IEnumerable<StudentExportDto>> SendImportAsync(ImportFilesAdapter files)
+        private async Task<IEnumerable<StudentExportDto>> SendNewStudentsImportAsync(ImportFilesAdapter files)
         {
             var http = httpClientFactory.CreateClient("ImportService");
             var content = new MultipartFormDataContent();
@@ -48,23 +48,76 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
                 content.Add(fileContent, "journal", files.journal.FileName);
             }
 
-            var response = await http.PostAsync(configuration["Services:Import:import_students"], content);
+            if (files.statement != null)
+            {
+                var fileContent = new StreamContent(files.statement.OpenReadStream());
+                content.Add(fileContent, "statement", files.statement.FileName);
+            }
+
+            if (files.plan != null)
+            {
+                var fileContent = new StreamContent(files.plan.OpenReadStream());
+                content.Add(fileContent, "plan", files.plan.FileName);
+            }
+
+            var endpoint = configuration["Services:Import:import_students"];
+            var response = await http.PostAsync(endpoint, content);
             response.EnsureSuccessStatusCode();
 
             return await response.Content.ReadFromJsonAsync<IEnumerable<StudentExportDto>>();
         }
 
-        public async Task ImportFilesAsync(ImportFilesAdapter files)
+        private async Task<DiplomaSupplementData> SendStudentCardImportAsync(ImportFilesAdapter files)
+        {
+            var http = httpClientFactory.CreateClient("ImportService");
+            var content = new MultipartFormDataContent();
+
+            var fileContent = new StreamContent(files.studentCard.OpenReadStream());
+            content.Add(fileContent, "studentCard", files.studentCard.FileName);
+
+            var endpoint = configuration["Services:Import:import_student_card"];
+            var response = await http.PostAsync(endpoint, content);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<DiplomaSupplementData>();
+        }
+
+        public async Task<DiplomaSupplementData?> ImportFilesAsync(ImportFilesAdapter files)
         {
             logger.LogInformation("Начата передача импорта файлов...");
             if (files == null) throw new ArgumentNullException(nameof(files));
-            if (files.ld == null) throw new ArgumentNullException(nameof(files.ld));
-            if (files.contract == null) throw new ArgumentNullException(nameof(files.contract));
-            if (files.journal == null) throw new ArgumentNullException(nameof(files.journal));
+            if (files.studentCard == null)
+            {
+                if (files.ld == null) throw new ArgumentNullException(nameof(files.ld));
+                if (files.contract == null) throw new ArgumentNullException(nameof(files.contract));
+                if (files.journal == null) throw new ArgumentNullException(nameof(files.journal));
+                if (files.plan == null) throw new ArgumentNullException(nameof(files.plan));
+                if (files.statement == null) throw new ArgumentNullException(nameof(files.statement));
 
+                await ProcessStudentImport(files);
+                return null;
+            }
+            else
+                return await ProcessCardImport(files);
+        }
+
+        private async Task<DiplomaSupplementData> ProcessCardImport(ImportFilesAdapter files)
+        {
+            // Отправка запроса в сервис "Импорт" и получение готового массива
+            logger.LogInformation("Отправка запроса в сервис \"Импорт\" и получение готовых данных для приложения диплома...");
+            DiplomaSupplementData data = await SendStudentCardImportAsync(files);
+            logger.LogInformation("Получен массив с готовыми данными.");
+
+            // Конвертация и добавление в БД
+            logger.LogInformation("Получен ответ с готовыми данными. Отправляем клиенту...");
+            return data;
+        }
+
+        private async Task ProcessStudentImport(ImportFilesAdapter files)
+        {
             // Отправка запроса в сервис "Импорт" и получение готового массива
             logger.LogInformation("Отправка запроса в сервис \"Импорт\" и получение готового массива...");
-            var newStudents = await SendImportAsync(files);
+            var newStudents = await SendNewStudentsImportAsync(files);
             logger.LogInformation("Получен массив с готовыми объектами.");
 
             // Конвертация и добавление в БД
@@ -74,6 +127,7 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
             await studentsService.ImportStudentsAsync(newStudents, existingStudentsInGroups);
 
             logger.LogInformation("Все объекты были инпортированы в базу данных. Импорт завершен.");
+
         }
 
         private IEnumerable<string> GetAllUniqueGroupNames(IEnumerable<StudentExportDto> students)

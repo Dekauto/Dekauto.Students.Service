@@ -2,7 +2,6 @@
 {
     public class StudentExportDto
     {
-
         public string? Name { get; set; } // Имя +
         public string? Surname { get; set; } // Фамилия +
         public string? Patronymic { get; set; } // Отчество +
@@ -76,6 +75,8 @@
         public string? EducationRelationForm { get; set; } // Форма отношений +
         public string? EducationRelationNum { get; set; } // Номер отношений с учебным заведением +
         public DateOnly? EducationRelationDate { get; set; } // Дата начала отношений с учебным заведением +
+
+        public List<DisciplineGradeDto> DisciplineResults { get; set; } = new(); // Список дисциплин +
 
     }
 }

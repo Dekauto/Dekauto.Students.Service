@@ -11,8 +11,8 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
     public class ImportController : ControllerBase
     {
         private readonly IImportProvider importProvider;
-        private readonly ILogger<ExportController> logger;
-        public ImportController(IImportProvider importProvider, ILogger<ExportController> logger)
+        private readonly ILogger<ImportController> logger;
+        public ImportController(IImportProvider importProvider, ILogger<ImportController> logger)
         {
             this.importProvider = importProvider;
             this.logger = logger;
@@ -24,13 +24,9 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
             try
             {
                 if (files is null)
-                {
                     throw new ArgumentNullException(nameof(files));
-                }
 
-                await importProvider.ImportFilesAsync(files);
-
-                return Ok();
+                return Ok(await importProvider.ImportFilesAsync(files));
             }
             catch (ArgumentNullException ex)
             {

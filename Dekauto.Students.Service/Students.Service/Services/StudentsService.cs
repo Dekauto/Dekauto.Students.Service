@@ -3,8 +3,6 @@ using Dekauto.Students.Service.Students.Service.Domain.Entities.DTO;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
 using Dekauto.Students.Service.Students.Service.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Migrations.Operations;
-using System.Collections.Generic;
 using System.Text.Json;
 using Group = Dekauto.Students.Service.Students.Service.Domain.Entities.Group;
 
@@ -13,12 +11,14 @@ namespace Dekauto.Students.Service.Students.Service.Services
     public class StudentsService : IStudentsService
     {
         private readonly IStudentsRepository studentsRepository;
+        private readonly IDisciplineGradesService disciplineGradesService;
         private readonly DekautoContext context;
 
-        public StudentsService(IStudentsRepository studentsRepository, DekautoContext сontext)
+        public StudentsService(IStudentsRepository studentsRepository, DekautoContext сontext, IDisciplineGradesService disciplineGradesService)
         {
             this.studentsRepository = studentsRepository;
             this.context = сontext;
+            this.disciplineGradesService = disciplineGradesService;
         }
 
         /// <summary>
@@ -37,15 +37,16 @@ namespace Dekauto.Students.Service.Students.Service.Services
         {
             var student = await studentsRepository.GetByIdAsync(studentId);
             if (student == null) throw new KeyNotFoundException(nameof(student));
-            
+
             // Конвертируем общие поля
             var studentExportDto = JsonSerializationConvert<Student, StudentExportDto>(student);
 
             // Дополняем объект нужными данными из БД
-            if (student.Group == null) 
+            if (student.Group == null)
                 throw new InvalidOperationException($"Отсутствует группа у студента {student.Surname} (id = {student.Id})");
-            if (student.Oo == null) 
+            if (student.Oo == null)
                 throw new InvalidOperationException($"Отсутствует образовательная организация у студента {student.Surname} (id = {student.Id})");
+
             studentExportDto.GroupName = student.Group.Name;
             studentExportDto.OOName = student.Oo.Name;
             studentExportDto.OOAddress = student.Oo.OoAddress;
@@ -53,8 +54,14 @@ namespace Dekauto.Students.Service.Students.Service.Services
             studentExportDto.EducationReceivedSerial = student.EducationReceivedSerial;
             studentExportDto.EducationReceivedEndYear = student.EducationReceivedEndYear;
 
+            if (student.DisciplineGrades != null && student.DisciplineGrades.Any())
+            {
+                studentExportDto.DisciplineResults = disciplineGradesService.ToDtos(student.DisciplineGrades).ToList();
+            }
+
             return studentExportDto;
         }
+
 
         public async Task<Student> FromDtoAsync(StudentDto studentDto)
         {
@@ -64,6 +71,28 @@ namespace Dekauto.Students.Service.Students.Service.Services
             student ??= JsonSerializationConvert<StudentDto, Student>(studentDto);
 
             return student;
+        }
+
+        /// <summary>
+        /// Ручной маппинг списка оценок из DTO в сущности.
+        /// Гарантирует корректный перенос полей Name, Score, Semester и др.
+        /// </summary>
+        private ICollection<DisciplineGrade> FromDisciplineGradeDtos(IEnumerable<DisciplineGradeDto> dtos)
+        {
+            if (dtos == null) return new List<DisciplineGrade>();
+
+            return dtos.Select(dto => new DisciplineGrade
+            {
+                Id = Guid.Empty,
+                StudentId = Guid.Empty,
+                Name = dto.DisciplineName,
+                Score = dto.Score,
+                Semester = dto.Semester,
+                Year = dto.Year,
+                ControlType = dto.ControlType,
+                AudHours = dto.AudHours,
+                CreditUnits = dto.CreditUnits
+            }).ToList();
         }
 
         public async Task<IEnumerable<StudentExportDto>> ToExportDtosAsync(IEnumerable<Student> students)
@@ -84,7 +113,7 @@ namespace Dekauto.Students.Service.Students.Service.Services
             if (student == null) throw new ArgumentNullException(nameof(student));
             return JsonSerializationConvert<Student, StudentDto>(student);
         }
-        
+
         public IEnumerable<StudentDto> ToDtos(IEnumerable<Student> students)
         {
             if (students == null) throw new ArgumentNullException(nameof(students));
@@ -149,24 +178,67 @@ namespace Dekauto.Students.Service.Students.Service.Services
             }
 
             // Проверка есть ли такой студент уже в предсталенных группах
+            // ВАЖНО: existingStudentsInGroups может быть "легковесным" (без вложенных коллекций), поэтому для обновления оценок нужно будет делать отдельный запрос
             var existingStudent = existingStudentsInGroups.FirstOrDefault(
                 s => s.Name == student.Name
                 && student.Surname == s.Surname
                 && student.Patronymic == s.Patronymic
                 && student.BirthdayDate == s.BirthdayDate);
 
-
             // Защита от дубликатов
             if (existingStudent == null)
             {
+                // Новый студент - просто добавляем, EF сам добавит и вложенные оценки
                 await context.Students.AddAsync(student);
             }
             else
             {
-                // Если считается, что existingStudent тот же, то ставим id (единственный primary key) для student
-                // и обновляем existingStudent за счет student с правильным id 
+                // Если студент существует, обновляем его поля и мержим оценки
+
+                // 1. Обновляем ID, чтобы EF понял, о ком речь, и обновляем базовые поля через репозиторий
                 student.Id = existingStudent.Id;
+
+                // Копируем базовые поля из импортируемого объекта в существующий (или используем UpdateAsync, который делает SetValues)
+                // Здесь мы полагаемся на то, что studentsRepository.UpdateAsync обновит скалярные свойства.
                 await studentsRepository.UpdateAsync(student);
+
+                // 2. Обработка оценок (DisciplineGrades)
+                if (student.DisciplineGrades != null && student.DisciplineGrades.Any())
+                {
+                    // Загружаем существующие оценки из БД, так как existingStudentsInGroups может их не содержать
+                    var existingGrades = await context.DisciplineGrades
+                        .Where(g => g.StudentId == existingStudent.Id)
+                        .ToListAsync();
+
+                    foreach (var newGrade in student.DisciplineGrades)
+                    {
+                        // Ищем, есть ли такая оценка уже (совпадение по Названию, Семестру, Году и Типу контроля)
+                        var existingGradeMatch = existingGrades.FirstOrDefault(g =>
+                            g.Name == newGrade.Name &&
+                            g.Semester == newGrade.Semester &&
+                            g.Year == newGrade.Year &&
+                            g.ControlType == newGrade.ControlType);
+
+                        if (existingGradeMatch != null)
+                        {
+                            // Обновляем существующую оценку
+                            existingGradeMatch.Score = newGrade.Score;
+                            existingGradeMatch.AudHours = newGrade.AudHours;
+                            existingGradeMatch.CreditUnits = newGrade.CreditUnits;
+                            // Другие поля при необходимости
+
+                            // Явно говорим контексту, что объект изменен
+                            context.Entry(existingGradeMatch).State = EntityState.Modified;
+                        }
+                        else
+                        {
+                            // Добавляем новую оценку, привязывая к существующему студенту
+                            newGrade.StudentId = existingStudent.Id;
+                            // ID будет сгенерирован базой или конструктором, если Guid.Empty
+                            await context.DisciplineGrades.AddAsync(newGrade);
+                        }
+                    }
+                }
             }
             return student;
         }
@@ -177,7 +249,12 @@ namespace Dekauto.Students.Service.Students.Service.Services
         private async Task<Student> ImportStudentsFromExportDtosAsync(StudentExportDto studentExportDto, IEnumerable<Student> existingStudentsInGroups)
         {
             var student = JsonSerializationConvert<StudentExportDto, Student>(studentExportDto);
-            // TODO: убрать обработку объектов в свои репозитории
+
+            if (studentExportDto.DisciplineResults != null && studentExportDto.DisciplineResults.Any())
+            {
+                // Конвертируем DTO оценок в сущности
+                student.DisciplineGrades = disciplineGradesService.FromDtos(studentExportDto.DisciplineResults).ToList();
+            }
 
             // Обработка группы
             var group = await context.Groups.FirstOrDefaultAsync(x => x.Name == studentExportDto.GroupName);
@@ -210,6 +287,6 @@ namespace Dekauto.Students.Service.Students.Service.Services
 
             return student;
         }
-    
     }
+
 }

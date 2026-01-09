@@ -1,11 +1,8 @@
-﻿using Dekauto.Students.Service;
-using Dekauto.Students.Service.Students.Service.Domain.Entities;
+﻿using Dekauto.Students.Service.Students.Service.Domain.Entities;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
-using Dekauto.Students.Service.Students.Service.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics.CodeAnalysis;
 
-namespace Dekauto.groups.Service.groups.Service.Infrastructure
+namespace Dekauto.Students.Service.Students.Service.Infrastructure
 {
     public class GroupsRepository : IGroupsRepository
     {
