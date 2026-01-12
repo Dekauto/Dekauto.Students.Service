@@ -1,4 +1,5 @@
-﻿using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
+﻿using Dekauto.Students.Service.Students.Service.Domain.Entities.Adapters;
+using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,6 +14,7 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
         private readonly IExportProvider exportProvider;
         private readonly ILogger<ExportController> logger;
         private readonly string defaultLatFileName;
+        private readonly string defaultDiplomaLatFileName;
 
         public ExportController(IExportProvider exportProvider, IConfiguration configuration,
             ILogger<ExportController> logger)
@@ -21,6 +23,7 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
             this.logger = logger;
 
             defaultLatFileName = configuration["Services:Export:defaultLatFileName"] ?? "exported_student_card";
+            defaultDiplomaLatFileName = configuration["Services:Export:defaultDiplomaLatFileName"] ?? "exported_diploma_supplement";
         }
 
         // Проблема: передается только сам файл, а его название автомат. вписывается в заголовки, но без поддержки кириллицы.
@@ -78,6 +81,25 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
                 var mes = "Указанная группа не найдена либо она пуста.";
                 logger.LogWarning(ex, mes);
                 return StatusCode(StatusCodes.Status404NotFound, mes);
+            }
+            catch (Exception ex)
+            {
+                var mes = "Возникла непредвиденная ошибка сервера. Обратитесь к администратору или попробуйте позже.";
+                logger.LogError(ex, mes);
+                return StatusCode(StatusCodes.Status500InternalServerError, mes);
+            }
+        }
+
+        [HttpPost("diploma-supplement")]
+        public async Task<IActionResult> ExportDiplomaSupplementAsync(DiplomaSupplementRequest request)
+        {
+            try
+            {
+                var exportFileResult = await exportProvider.ExportDiplomaSupplementAsync(request);
+                SetHeaderFileNames(defaultLatFileName, exportFileResult.FileName);
+                logger.LogInformation($"Экспортировано приложение диплома.");
+
+                return File(exportFileResult.FileData, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             }
             catch (Exception ex)
             {

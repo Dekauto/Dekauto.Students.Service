@@ -1,5 +1,6 @@
 using Dekauto.Students.Service.Students.Service.Controllers;
 using Dekauto.Students.Service.Students.Service.Domain.Entities;
+using Dekauto.Students.Service.Students.Service.Domain.Entities.Adapters;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
 using System.Configuration;
 
@@ -80,6 +81,15 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
 
             logger.LogInformation($"Подготовка данных завершена.");
             return await ExportFile(studentExportDTOs, apiUrl);
+        }
+
+        public async Task<ExportFileResult> ExportDiplomaSupplementAsync(DiplomaSupplementRequest request)
+        {
+            // Получаем адрес API из подробного конфига
+            var apiUrl = configuration["Services:Export:diploma_supplement"];
+            if (apiUrl == null) throw new ConfigurationErrorsException(nameof(apiUrl));
+
+            return await ExportFile(request, apiUrl);
         }
     }
 }
