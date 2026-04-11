@@ -96,7 +96,7 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
             try
             {
                 var exportFileResult = await exportProvider.ExportDiplomaSupplementAsync(request);
-                SetHeaderFileNames(defaultLatFileName, exportFileResult.FileName);
+                SetHeaderFileNames(defaultDiplomaLatFileName, exportFileResult.FileName);
                 logger.LogInformation($"Экспортировано приложение диплома.");
 
                 return File(exportFileResult.FileData, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
