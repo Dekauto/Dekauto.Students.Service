@@ -69,11 +69,16 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
 
         private async Task<DiplomaSupplementData> SendStudentCardImportAsync(ImportFilesAdapter files)
         {
+            if (files.studentCard == null) throw new ArgumentNullException(nameof(files.studentCard));
+            if (files.plan == null) throw new ArgumentNullException(nameof(files.plan));
+
             var http = httpClientFactory.CreateClient("ImportService");
             var content = new MultipartFormDataContent();
 
             var fileContent = new StreamContent(files.studentCard.OpenReadStream());
             content.Add(fileContent, "studentCard", files.studentCard.FileName);
+            var planContent = new StreamContent(files.plan.OpenReadStream());
+            content.Add(planContent, "plan", files.plan.FileName);
 
             var endpoint = configuration["Services:Import:import_student_card"];
             var response = await http.PostAsync(endpoint, content);
@@ -98,7 +103,11 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
                 return null;
             }
             else
+            {
+                if (files.plan == null)
+                    throw new ArgumentNullException(nameof(files.plan));
                 return await ProcessCardImport(files);
+            }
         }
 
         private async Task<DiplomaSupplementData> ProcessCardImport(ImportFilesAdapter files)
