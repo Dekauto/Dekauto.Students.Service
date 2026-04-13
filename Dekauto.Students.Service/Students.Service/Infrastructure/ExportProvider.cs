@@ -34,6 +34,11 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
             logger.LogInformation("Отправка запроса в сервис \"Экспорт\" и получение готового файла...");
             var response = await http.PostAsJsonAsync(apiUrl, data);
             logger.LogInformation($"Получен ответ с кодом: {response.StatusCode}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var errBody = await response.Content.ReadAsStringAsync();
+                logger.LogError("Сервис \"Экспорт\" вернул ошибку. Тело ответа: {Body}", errBody);
+            }
             response.EnsureSuccessStatusCode();
 
             var fileData = await response.Content.ReadAsByteArrayAsync();
