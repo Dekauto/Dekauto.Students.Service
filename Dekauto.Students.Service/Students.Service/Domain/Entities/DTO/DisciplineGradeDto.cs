@@ -13,6 +13,11 @@
 
         public int? PlanOrder { get; set; }
 
+        /// <summary>Блок учебного плана (соответствует SupplementPlanBucket в экспорте).</summary>
+        public int? PlanBucket { get; set; }
+
         public bool RequiresManualValidation { get; set; }
+
+        public bool IsCardOnlyUnmatchedPlan { get; set; }
     }
 }
