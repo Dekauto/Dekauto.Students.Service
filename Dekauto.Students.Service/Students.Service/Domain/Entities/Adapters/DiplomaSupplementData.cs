@@ -33,6 +33,9 @@ namespace Dekauto.Students.Service.Students.Service.Domain.Entities.Adapters
         /// <summary>Лист «4 доп.сведения», ячейка B7 — строка «Форма обучения: …».</summary>
         public string? SupplementAdditionalSheetStudyFormLine { get; set; }
 
+        /// <summary>«1 Обладатель диплома» B11 — квалификация («ОбщСведения» ~C110).</summary>
+        public string? SupplementOwnerQualification { get; set; }
+
         // Наименования дисциплин (модулей), практик, курсовых работ
         // +Количество зачетных единиц / академических часов / астрономических часов
         // +Оценка
