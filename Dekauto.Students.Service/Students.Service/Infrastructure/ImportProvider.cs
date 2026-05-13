@@ -62,7 +62,11 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
 
             var endpoint = configuration["Services:Import:import_students"];
             var response = await http.PostAsync(endpoint, content);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                throw new ImportServiceClientException((int)response.StatusCode, body);
+            }
 
             return await response.Content.ReadFromJsonAsync<IEnumerable<StudentExportDto>>();
         }
@@ -82,7 +86,11 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
 
             var endpoint = configuration["Services:Import:import_student_card"];
             var response = await http.PostAsync(endpoint, content);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                throw new ImportServiceClientException((int)response.StatusCode, body);
+            }
 
             return await response.Content.ReadFromJsonAsync<DiplomaSupplementData>();
         }

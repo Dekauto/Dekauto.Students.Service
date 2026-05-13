@@ -45,6 +45,12 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.Limits.MaxRequestBodySize = 524_288_000; // 500 MB — согласовано с лимитами nginx и сервиса импорта
+    });
+
     // Применение конфигов.
     builder.Configuration
         .SetBasePath(Directory.GetCurrentDirectory())

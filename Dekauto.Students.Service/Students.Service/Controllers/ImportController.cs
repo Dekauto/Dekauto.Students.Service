@@ -1,5 +1,6 @@
 ﻿using Dekauto.Students.Service.Students.Service.Domain.Entities.Adapters;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
+using Dekauto.Students.Service.Students.Service.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,6 +34,24 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
                 var mes = "Некоторые (или все) файлы не передались на сервер. Обратитесь к администратору или попробуйте позже.";
                 logger.LogError(ex, mes);
                 return StatusCode(StatusCodes.Status400BadRequest, mes);
+            }
+            catch (ImportServiceClientException ex)
+            {
+                if (ex.StatusCode == StatusCodes.Status400BadRequest && !string.IsNullOrWhiteSpace(ex.ResponseBody))
+                {
+                    return new ContentResult
+                    {
+                        Content = ex.ResponseBody,
+                        ContentType = "application/json; charset=utf-8",
+                        StatusCode = StatusCodes.Status400BadRequest
+                    };
+                }
+
+                var mes = "Сервис импорта вернул ошибку. Обратитесь к администратору или попробуйте позже.";
+                logger.LogError(ex, "{Mes} HTTP {Code}. Тело: {Body}", mes, ex.StatusCode, ex.ResponseBody);
+                return StatusCode(
+                    ex.StatusCode is >= 400 and < 500 ? ex.StatusCode : StatusCodes.Status502BadGateway,
+                    ex.ResponseBody ?? mes);
             }
             catch (Exception ex)
             {
