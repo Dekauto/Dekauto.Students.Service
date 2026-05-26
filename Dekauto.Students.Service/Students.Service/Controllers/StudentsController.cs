@@ -1,5 +1,6 @@
 ﻿using Dekauto.Students.Service.Students.Service.Domain.Entities.DTO;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
+using Dekauto.Students.Service.Students.Service.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,13 +13,18 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
     {
         private readonly IStudentsRepository studentsRepository;
         private readonly IStudentsService studentsService;
+        private readonly ITeachersCatalogClient teachersCatalogClient;
         private readonly ILogger<ExportController> logger;
 
-        public StudentsController(IStudentsRepository studentsRepository, IStudentsService studentsService,
+        public StudentsController(
+            IStudentsRepository studentsRepository,
+            IStudentsService studentsService,
+            ITeachersCatalogClient teachersCatalogClient,
             ILogger<ExportController> logger)
         {
             this.studentsRepository = studentsRepository;
             this.studentsService = studentsService;
+            this.teachersCatalogClient = teachersCatalogClient;
             this.logger = logger;
         }
 
@@ -137,6 +143,7 @@ namespace Dekauto.Students.Service.Students.Service.Controllers
             try
             {
                 await studentsRepository.DeleteByIdAsync(studentId);
+                await teachersCatalogClient.NotifyStudentDeletedAsync(studentId, HttpContext.RequestAborted);
                 return Ok();
             }
             catch (KeyNotFoundException ex)

@@ -2,8 +2,10 @@ using Dekauto.Students.Service.Students.Service.Controllers;
 using Dekauto.Students.Service.Students.Service.Domain;
 using Dekauto.Students.Service.Students.Service.Domain.Entities.DTO;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
+using Dekauto.Students.Service.Students.Service.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Students.Tests;
@@ -13,6 +15,8 @@ public sealed class StudentsControllerTests
 {
     private Mock<IStudentsService> studentsServiceMock;
     private Mock<IStudentsRepository> studentsRepositoryMock;
+    private Mock<ITeachersCatalogClient> teachersCatalogClientMock;
+    private Mock<ILogger<ExportController>> loggerMock;
     private StudentsController studentsController;
 
 
@@ -21,7 +25,16 @@ public sealed class StudentsControllerTests
     {
         studentsServiceMock = new Mock<IStudentsService>();
         studentsRepositoryMock = new Mock<IStudentsRepository>();
+        teachersCatalogClientMock = new Mock<ITeachersCatalogClient>();
+        loggerMock = new Mock<ILogger<ExportController>>();
     }
+
+    private StudentsController CreateController() =>
+        new(
+            studentsRepositoryMock.Object,
+            studentsServiceMock.Object,
+            teachersCatalogClientMock.Object,
+            loggerMock.Object);
 
     [TestMethod]
     public async Task GetAllStudents_Valid_Ok()
@@ -32,7 +45,7 @@ public sealed class StudentsControllerTests
         studentsServiceMock.Setup(x => x.ToDtos(It.IsAny<List<Student>>()))
             .Returns(new List<StudentDto>());
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.GetAllStudentsAsync();
@@ -48,7 +61,7 @@ public sealed class StudentsControllerTests
         studentsRepositoryMock.Setup(x => x.GetAllAsync())
             .ThrowsAsync(new Exception());
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.GetAllStudentsAsync();
@@ -66,7 +79,7 @@ public sealed class StudentsControllerTests
         studentsServiceMock.Setup(x => x.ToDtos(It.IsAny<List<Student>>()))
             .Throws(new Exception());
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.GetAllStudentsAsync();
@@ -87,7 +100,7 @@ public sealed class StudentsControllerTests
         studentsServiceMock.Setup(x => x.ToDto(It.IsAny<Student>()))
             .Returns(new StudentDto());
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.GetStudentByIdAsync(id);
@@ -104,7 +117,7 @@ public sealed class StudentsControllerTests
         studentsRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<Guid>()))
             .ThrowsAsync(new Exception());
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.GetStudentByIdAsync(id);
@@ -123,7 +136,7 @@ public sealed class StudentsControllerTests
         studentsServiceMock.Setup(x => x.ToDto(It.IsAny<Student>()))
             .Throws(new Exception());
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.GetStudentByIdAsync(id);
@@ -140,7 +153,7 @@ public sealed class StudentsControllerTests
         studentsRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync((Student)null);
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.GetStudentByIdAsync(id);
@@ -159,7 +172,7 @@ public sealed class StudentsControllerTests
         var updatedStudentDto = new StudentDto();
         studentsServiceMock.Setup(x => x.UpdateAsync(It.IsAny<Guid>(), It.IsAny<StudentDto>()));
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.UpdateStudentAsync(id, updatedStudentDto);
@@ -177,7 +190,7 @@ public sealed class StudentsControllerTests
         studentsServiceMock.Setup(x => x.UpdateAsync(It.IsAny<Guid>(), It.IsAny<StudentDto>()))
             .ThrowsAsync(new Exception());
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.UpdateStudentAsync(id, updatedStudentDto);
@@ -195,7 +208,7 @@ public sealed class StudentsControllerTests
         var studentDto = new StudentDto();
         studentsServiceMock.Setup(x => x.AddAsync(It.IsAny<StudentDto>()));
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.AddStudentAsync(studentDto);
@@ -212,7 +225,7 @@ public sealed class StudentsControllerTests
         studentsServiceMock.Setup(x => x.AddAsync(It.IsAny<StudentDto>()))
             .ThrowsAsync(new Exception());
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.AddStudentAsync(studentDto);
@@ -229,14 +242,20 @@ public sealed class StudentsControllerTests
         // Arrange
         var id = new Guid();
         studentsRepositoryMock.Setup(x => x.DeleteByIdAsync(It.IsAny<Guid>()));
+        teachersCatalogClientMock
+            .Setup(x => x.NotifyStudentDeletedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.DeleteStudentAsync(id);
 
         // Assert
         Assert.IsInstanceOfType<OkResult>(response);
+        teachersCatalogClientMock.Verify(
+            x => x.NotifyStudentDeletedAsync(id, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [TestMethod]
@@ -247,7 +266,7 @@ public sealed class StudentsControllerTests
         studentsRepositoryMock.Setup(x => x.DeleteByIdAsync(It.IsAny<Guid>()))
             .ThrowsAsync(new Exception());
 
-        studentsController = new StudentsController(studentsRepositoryMock.Object, studentsServiceMock.Object);
+        studentsController = CreateController();
 
         // Act
         var response = await studentsController.DeleteStudentAsync(id);

@@ -177,6 +177,16 @@ try
 
         client.BaseAddress = new Uri(authUri);
     });
+    builder.Services.AddHttpClient("TeachersService", (_, client) =>
+    {
+        var teachersUri = builder.Configuration["Services:Teachers:general"] ?? "http://dekauto.teachers:5511/api/";
+        if (!teachersUri.EndsWith('/'))
+        {
+            teachersUri += "/";
+        }
+
+        client.BaseAddress = new Uri(teachersUri);
+    });
 
     builder.Services.AddControllers()
         .AddJsonOptions(options =>
@@ -230,6 +240,7 @@ try
     builder.Services.AddTransient<IGroupsService, GroupsService>();
     builder.Services.AddTransient<IExportProvider, ExportProvider>();
     builder.Services.AddTransient<IImportProvider, ImportProvider>();
+    builder.Services.AddTransient<ITeachersCatalogClient, TeachersCatalogClient>();
     builder.Services.AddSingleton<IRequestMetricsService, RequestMetricsService>();
     builder.Services.AddDbContext<DekautoContext>(options =>
         options.UseNpgsql(connectionString)
