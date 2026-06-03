@@ -9,6 +9,7 @@
         public string? ControlType { get; set; }
 
         public double? AudHours { get; set; }
+        public double? TotalHours { get; set; }
         public double? CreditUnits { get; set; }
 
         public int? PlanOrder { get; set; }

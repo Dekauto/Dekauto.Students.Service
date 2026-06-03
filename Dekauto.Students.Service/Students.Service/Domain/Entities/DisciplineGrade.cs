@@ -26,6 +26,8 @@ public partial class DisciplineGrade
 
     public double? AudHours { get; set; }
 
+    public double? TotalHours { get; set; }
+
     public double? CreditUnits { get; set; }
 
     [JsonIgnore]

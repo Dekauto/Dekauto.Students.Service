@@ -91,6 +91,7 @@ namespace Dekauto.Students.Service.Students.Service.Services
                 Year = dto.Year,
                 ControlType = dto.ControlType,
                 AudHours = dto.AudHours,
+                TotalHours = dto.TotalHours,
                 CreditUnits = dto.CreditUnits
             }).ToList();
         }
@@ -224,6 +225,7 @@ namespace Dekauto.Students.Service.Students.Service.Services
                             // Обновляем существующую оценку
                             existingGradeMatch.Score = newGrade.Score;
                             existingGradeMatch.AudHours = newGrade.AudHours;
+                            existingGradeMatch.TotalHours = newGrade.TotalHours;
                             existingGradeMatch.CreditUnits = newGrade.CreditUnits;
                             // Другие поля при необходимости
 

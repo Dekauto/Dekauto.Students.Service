@@ -45,6 +45,7 @@ public partial class DekautoContext : DbContext
                 .HasDefaultValueSql("uuid_generate_v4()")
                 .HasColumnName("id");
             entity.Property(e => e.AudHours).HasColumnName("aud_hours");
+            entity.Property(e => e.TotalHours).HasColumnName("total_hours");
             entity.Property(e => e.ControlType)
                 .HasMaxLength(255)
                 .HasColumnName("control_type");
