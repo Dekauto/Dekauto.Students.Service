@@ -25,7 +25,7 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
             this.groupsService = groupsService;
         }
 
-        private async Task<IEnumerable<StudentExportDto>> SendNewStudentsImportAsync(ImportFilesAdapter files)
+        private async Task<ImportStudentsResponseDto> SendNewStudentsImportAsync(ImportFilesAdapter files)
         {
             var http = httpClientFactory.CreateClient("ImportService");
             var content = new MultipartFormDataContent();
@@ -68,7 +68,8 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
                 throw new ImportServiceClientException((int)response.StatusCode, body);
             }
 
-            return await response.Content.ReadFromJsonAsync<IEnumerable<StudentExportDto>>();
+            return await response.Content.ReadFromJsonAsync<ImportStudentsResponseDto>()
+                   ?? new ImportStudentsResponseDto();
         }
 
         private async Task<DiplomaSupplementData> SendStudentCardImportAsync(ImportFilesAdapter files)
@@ -95,7 +96,7 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
             return await response.Content.ReadFromJsonAsync<DiplomaSupplementData>();
         }
 
-        public async Task<DiplomaSupplementData?> ImportFilesAsync(ImportFilesAdapter files)
+        public async Task<ImportFilesResult?> ImportFilesAsync(ImportFilesAdapter files)
         {
             logger.LogInformation("Начата передача импорта файлов...");
             if (files == null) throw new ArgumentNullException(nameof(files));
@@ -107,15 +108,15 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
                 if (files.plan == null) throw new ArgumentNullException(nameof(files.plan));
                 if (files.statement == null) throw new ArgumentNullException(nameof(files.statement));
 
-                await ProcessStudentImport(files);
-                return null;
+                var warnings = await ProcessStudentImport(files);
+                return new ImportFilesResult { ImportWarnings = warnings };
             }
-            else
-            {
-                if (files.plan == null)
-                    throw new ArgumentNullException(nameof(files.plan));
-                return await ProcessCardImport(files);
-            }
+
+            if (files.plan == null)
+                throw new ArgumentNullException(nameof(files.plan));
+
+            var data = await ProcessCardImport(files);
+            return new ImportFilesResult { Data = data };
         }
 
         private async Task<DiplomaSupplementData> ProcessCardImport(ImportFilesAdapter files)
@@ -130,21 +131,45 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
             return data;
         }
 
-        private async Task ProcessStudentImport(ImportFilesAdapter files)
+        private async Task<IReadOnlyList<ImportWarningDto>> ProcessStudentImport(ImportFilesAdapter files)
         {
             // Отправка запроса в сервис "Импорт" и получение готового массива
             logger.LogInformation("Отправка запроса в сервис \"Импорт\" и получение готового массива...");
-            var newStudents = await SendNewStudentsImportAsync(files);
+            var importResponse = await SendNewStudentsImportAsync(files);
             logger.LogInformation("Получен массив с готовыми объектами.");
 
             // Конвертация и добавление в БД
             logger.LogInformation("Получен ответ с готовыми объектами. Начата конвертация и добавление в БД.");
+            var newStudents = importResponse.Students;
             var groupNames = GetAllUniqueGroupNames(newStudents);
             var existingStudentsInGroups = await groupsService.GetAllStudentsForGroupsAsync(groupNames);
             await studentsService.ImportStudentsAsync(newStudents, existingStudentsInGroups);
 
             logger.LogInformation("Все объекты были инпортированы в базу данных. Импорт завершен.");
+            return EnrichImportWarnings(importResponse.ImportWarnings, files.statement?.FileName);
+        }
 
+        private static IReadOnlyList<ImportWarningDto> EnrichImportWarnings(
+            IReadOnlyList<ImportWarningDto> warnings,
+            string? statementFileName)
+        {
+            if (string.IsNullOrWhiteSpace(statementFileName))
+                return warnings;
+
+            return warnings
+                .Select(w => string.IsNullOrWhiteSpace(w.FileName)
+                    ? new ImportWarningDto
+                    {
+                        Code = w.Code,
+                        Message = w.Message,
+                        FileName = statementFileName,
+                        SheetName = w.SheetName,
+                        GroupName = w.GroupName,
+                        StudentDisplayName = w.StudentDisplayName,
+                        MatchedRows = w.MatchedRows
+                    }
+                    : w)
+                .ToList();
         }
 
         private IEnumerable<string> GetAllUniqueGroupNames(IEnumerable<StudentExportDto> students)

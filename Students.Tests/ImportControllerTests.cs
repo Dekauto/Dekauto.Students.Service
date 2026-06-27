@@ -1,8 +1,10 @@
 using Dekauto.Students.Service.Students.Service.Controllers;
 using Dekauto.Students.Service.Students.Service.Domain.Entities.Adapters;
+using Dekauto.Students.Service.Students.Service.Domain.Entities.DTO;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace Students.Tests;
@@ -18,7 +20,7 @@ public class ImportControllerTests
     public void Setup()
     {
         importProviderMock = new Mock<IImportProvider>();
-        importController = new ImportController(importProviderMock.Object);
+        importController = new ImportController(importProviderMock.Object, NullLogger<ImportController>.Instance);
     }
 
     [TestMethod]
@@ -27,11 +29,14 @@ public class ImportControllerTests
         // Arrange
         importFilesAdapterMock = new Mock<ImportFilesAdapter>();
 
+        importProviderMock.Setup(x => x.ImportFilesAsync(It.IsAny<ImportFilesAdapter>()))
+            .ReturnsAsync(new ImportFilesResult());
+
         // Act
         var response = await importController.ImportFilesFromFrontendAsync(importFilesAdapterMock.Object);
 
         // Assert
-        Assert.IsInstanceOfType<OkResult>(response);
+        Assert.IsInstanceOfType<OkObjectResult>(response);
 
     }
 
