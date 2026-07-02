@@ -40,7 +40,7 @@ namespace Dekauto.Students.Service.Students.Service.Services
             var entity = JsonSerializationConvert<DisciplineGradeDto, DisciplineGrade>(dto);
 
             // РУЧНОЙ МАППИНГ отличающихся полей
-            entity.Name = dto.DisciplineName;
+            entity.Name = DisciplineGradeReviewEncoding.EncodeName(dto.DisciplineName, dto.RequiresManualValidation);
 
             // При создании через DTO Id обычно пустой, но можно явно инициализировать
             // entity.Id = Guid.Empty; 
@@ -63,7 +63,9 @@ namespace Dekauto.Students.Service.Students.Service.Services
             var dto = JsonSerializationConvert<DisciplineGrade, DisciplineGradeDto>(entity);
 
             // РУЧНОЙ МАППИНГ отличающихся полей
-            dto.DisciplineName = entity.Name;
+            var (disciplineName, requiresManualValidation) = DisciplineGradeReviewEncoding.DecodeName(entity.Name);
+            dto.DisciplineName = disciplineName;
+            dto.RequiresManualValidation = requiresManualValidation;
 
             return dto;
         }

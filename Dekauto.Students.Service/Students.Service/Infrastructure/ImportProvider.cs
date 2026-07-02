@@ -1,4 +1,4 @@
-﻿using Dekauto.Students.Service.Students.Service.Controllers;
+using Dekauto.Students.Service.Students.Service.Controllers;
 using Dekauto.Students.Service.Students.Service.Domain.Entities.Adapters;
 using Dekauto.Students.Service.Students.Service.Domain.Entities.DTO;
 using Dekauto.Students.Service.Students.Service.Domain.Interfaces;
@@ -54,6 +54,15 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
                 content.Add(fileContent, "statement", files.statement.FileName);
             }
 
+            if (files.statements != null)
+            {
+                foreach (var statementFile in files.statements.Where(f => f != null && f.Length > 0))
+                {
+                    var fileContent = new StreamContent(statementFile.OpenReadStream());
+                    content.Add(fileContent, "statements", statementFile.FileName);
+                }
+            }
+
             if (files.plan != null)
             {
                 var fileContent = new StreamContent(files.plan.OpenReadStream());
@@ -106,7 +115,9 @@ namespace Dekauto.Students.Service.Students.Service.Infrastructure
                 if (files.contract == null) throw new ArgumentNullException(nameof(files.contract));
                 if (files.journal == null) throw new ArgumentNullException(nameof(files.journal));
                 if (files.plan == null) throw new ArgumentNullException(nameof(files.plan));
-                if (files.statement == null) throw new ArgumentNullException(nameof(files.statement));
+                var hasStatements = files.statements != null && files.statements.Count > 0;
+                if (!hasStatements && files.statement == null)
+                    throw new ArgumentNullException(nameof(files.statement));
 
                 var warnings = await ProcessStudentImport(files);
                 return new ImportFilesResult { ImportWarnings = warnings };
